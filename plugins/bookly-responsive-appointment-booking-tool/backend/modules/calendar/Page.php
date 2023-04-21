@@ -271,7 +271,296 @@ class Page extends Lib\Base\Ajax
             ) );
             $colors['mixed'] = get_option( 'bookly_appointment_status_mixed_color' );
         }
+        //lucky
+
+
+
+  global $wpdb;
+
+  //get current login staff  gender 
+  //mohit_new
+  $login_id =$_POST['staff_ids'];
+  $current_login_service_id = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix."bookly_staff_services WHERE staff_id='".$login_id."'",ARRAY_A);
+  
+  $service_id_hwe=array();
+  foreach($current_login_service_id as $current_login_service_id_hwe)
+  {
+     $service_id_hwe[] = $current_login_service_id_hwe['service_id'];
+  }
+       
+   //$implode_service_id=implode(',',$service_id_hwe);
+  
+  $current_staff_gender = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix."bookly_staff WHERE id='".$login_id."'",ARRAY_A);
+  foreach($current_staff_gender as $current_staff_gender_hwe)
+  {
+     $get_current_staff_gender = $current_staff_gender_hwe['gender'];
+      if($get_current_staff_gender == 'male')
+      {
+          $fm_gender ='Male';
+      }
+      else if($get_current_staff_gender == 'female')
+      {
+          $fm_gender ='Female';
+      }
+  }
+  
+  $customer = array();
+  $staff_id = $wpdb->get_results("SELECT 
+  a.id AS id,
+  a.staff_any AS staff_any,
+  a.location_id AS location_id,
+  a.internal_note AS internal_note,
+  a.internal_note AS internal_note,
+  a.start_date AS start_date,
+  a.end_date AS end_date,
+  a.service_id As service_id_hwe,
+  b.status AS status ,
+  b.custom_fields As custom_fiels_hwe,
+  b.number_of_persons AS total_number_of_persons,
+  b.number_of_persons AS number_of_persons,
+  b.customer_id AS customer_id,
+  c.full_name AS client_name,
+  c.first_name AS client_first_name,
+  c.last_name AS client_last_name,
+  c.phone AS client_phone,
+  c.email AS client_email,
+  c.birthday AS client_birthday,
+  c.notes AS client_note,
+  c.country AS country,
+  c.state AS state,
+  c.postcode AS postcode,
+  c.city AS city,
+  c.street AS street,
+  c.street_number AS street_number,
+  c.additional_address AS additional_address
+  FROM ".$wpdb->prefix."bookly_appointments AS a INNER JOIN ".$wpdb->prefix."bookly_customer_appointments AS b ON a.id =b.appointment_id INNER JOIN ".$wpdb->prefix."bookly_customers AS c ON b.customer_id =c.id WHERE (a.staff_id='0') && (b.custom_fields LIKE BINARY '%".$fm_gender."%' || b.custom_fields LIKE '%No Preference%') ",ARRAY_A);
+  
+  
+  $staffkey=0;
+  
+  foreach( $staff_id as $staff_id_hwe )
+  {
+     $staff_auto_id = $staff_id_hwe['customer_id'];
+     $staff_status_id = $staff_id_hwe['status'];
+     $number_of_persons = $staff_id_hwe['total_number_of_persons'];
+  
+      $get_gender = stripslashes($staff_id_hwe['custom_fiels_hwe']);
+      $decode_ste_gender =json_decode($get_gender,true); 
+      
+      /*foreach($decode_ste_gender as $decode_ste_gender_hwe)
+      {
+          $set_gender_value = $decode_ste_gender_hwe['value'];
+      }
+      if($set_gender_value != 'No Preference')
+      {    
+          if($set_gender_value != $fm_gender)
+          {
+                  unset($appointments[$staffkey]);
+                  continue;	
+           
+          }
+      }  */ 
+  
+      $status= $wpdb->get_results("SELECT 
+      c.full_name AS client_name,
+      c.first_name AS client_first_name,
+      c.last_name AS client_last_name,
+      c.phone AS client_phone,
+      c.email AS client_email,
+      c.birthday AS client_birthday,
+      c.notes AS appointment_notes
+      FROM wp_bookly_customers AS c WHERE id='".$staff_auto_id."'",ARRAY_A);
+  
+      $status_array=array();
+      $keyhwe=0;
+      foreach( $status as $status_value)
+      {  
+             $status[$keyhwe]["number_of_persons"]=$number_of_persons;
+             $status[$keyhwe]["status"]=$staff_status_id;
+            // $status_array[] =$status_value;
+              $keyhwe++;
+  
+           
+              
+  
+             
+      }
+      
+     // $blank_array =array();
+      //foreach($staff_id as $blank)
+      //{
+          $blank["customers"] = $status;
+          //$blank_array[] =$blank;
+      //}
+          $staff_id[$staffkey]["customers"]=$status;
+  
+          
+    $staffkey++;
+    
+                        
+    
+    }
+    
+    if(isset($_REQUEST['radius']) && $_REQUEST['radius'] !='')
+    {
+                $latitude='';
+                $longitude='';
+                if(isset($_REQUEST['zipcode']) && $_REQUEST['zipcode'] !='')
+                {    
+                            $url = "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyCZKEvihF8xfkRiJ3Mgbr9fSR2TbLHklzk&components=postal_code:".$_REQUEST['zipcode'];
+                            $result_string = file_get_contents($url);
+                            $result = json_decode($result_string, true);
+                            $value =$result['results'][0]['geometry']['location'];
+                
+                            
+                                $latitude =$value['lat'];
+                                $longitude =$value['lng'];
+    
+    
+                        
+                }
+                else
+                {
+                        $cuerrent_login_staff_id  =$_POST['staff_ids'];
+    
+                        $tablebookly2=$wpdb->prefix."interputer_lat_long";
+                        $select2="select * from $tablebookly2 where staff_id='".$cuerrent_login_staff_id."'";
+                        $results2=$wpdb->get_results($select2,ARRAY_A);
+                        foreach($results2 as $results3)
+                        {
+                                $latitude =$results3['latitude'];
+                                $longitude =$results3['longitude'];
+    
+                            
+                        }
+                }
+                            $query_radius = "SELECT *, (((acos(sin((".$latitude."*pi()/180)) * sin((`latitude`*pi()/180)) + cos((".$latitude."*pi()/180)) * cos((`latitude`*pi()/180)) * cos(((".$longitude."- `longitude`)*pi()/180)))) * 180/pi()) * 60 * 1.1515) as distance FROM `".$wpdb->prefix."interputer_booking_lat_long`";
+                            $distance =$wpdb->get_results($query_radius,ARRAY_A);
+    
+                            $dis_appointment_id=array();
+                            foreach($distance as $distance_hwe)
+                            {
+    
+                                if($distance_hwe['distance'] <= $_REQUEST['radius'] || $distance_hwe['distance']== '')
+                                {
+                                    //appontment id 
+                                    $dis_appointment_id[] =$distance_hwe['staff_id'];
+            
+                                }
+                            }
+    
+                
+        }
+
+        $appointments = array_merge($appointments,$staff_id);
+
+       
+
         foreach ( $appointments as $key => $appointment ) {
+
+            if(empty($appointment['service_id_hwe']))
+            {
+    
+                $appoint_id=$appointment['id'];
+    
+                $get_approved_ser_id = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix."bookly_appointments WHERE id='".$appoint_id."'",ARRAY_A);
+                foreach($get_approved_ser_id as $get_approved_ser_id_hwe)
+                {
+                  $approved_service_id=$get_approved_ser_id_hwe['service_id'];
+                    if(!in_array($approved_service_id,$service_id_hwe))
+                    {
+                       unset($appointments[$key]);
+                       continue;
+                    }
+                }
+                   
+    
+            }
+
+           
+            if(!empty($appointment['service_id_hwe']) && !in_array($appointment['service_id_hwe'],$service_id_hwe))
+            {
+               unset($appointments[$key]);
+               continue;
+            }
+    
+            if(isset($_REQUEST['radius']) && $_REQUEST['radius'] !='' && isset($_REQUEST['zipcode']) && $_REQUEST['zipcode'] !='')
+            {
+    
+                if(!in_array($appointment['id'],$dis_appointment_id))
+                {
+                    unset($appointments[$key]);
+                    continue;
+                
+                }
+    
+            }
+            else if(!empty($_REQUEST['zipcode']))
+            {
+                            
+    
+                        $customerid=$appointment['customer_id'];
+                    global $wpdb;
+                    $booklycustomer=$wpdb->prefix."bookly_customers";
+                    //$select ="select * from $booklycustomer where id='$customerid'";
+                    $select ="select * from $booklycustomer where id='$customerid'";
+                    $results=$wpdb->get_results($select);
+                    if($results[0]->postcode!=$_REQUEST['zipcode'])
+                    {
+                        unset($appointments[$key]);
+                        continue;	
+                    }		
+            }
+            //mohit
+            if(isset($_REQUEST['radius']) && $_REQUEST['radius'] !='')
+            {
+    
+                if(!in_array($appointment['id'],$dis_appointment_id))
+                {
+                    unset($appointments[$key]);
+                    continue;
+                
+                }
+    
+            }
+            
+    
+    
+    
+                $show_cancel_button='';
+                $styling_pending_button='';
+            if($appointment['customers'][0]['status'] == 'approved')
+            {
+                $change_color_status = 'success';
+                $button_name = 'Approved';
+                $check_condition = '0';
+                $appointment['id'];
+                $current_date_hwe =date("Y-m-d H:i:s");
+                $start_date_hwe =$appointment['start_date'];
+                $end_date_hwe =$appointment['end_date'];
+                if($current_date_hwe < $end_date_hwe)
+                {
+                    $styling_cancel_button ="display:inline !important;"; 
+                }
+                else
+                {
+                    $styling_cancel_button ="display:none;"; 
+                }
+                
+                
+                
+            }
+            else if($appointment['customers'][0]['status'] == 'pending')
+            {
+                $check_condition = '1';
+                $change_color_status = 'secondary';
+                $button_name = 'Accept Job';
+                $set_id_appointment ="change_status_".$appointment['id'];
+                $styling_pending_button ='background-color: red; font-size: 11px; padding: 5px;';
+                $styling_cancel_button="display:none;";
+            }
+
+
             $codes = $default_codes;
             $codes['appointment_id'] = $appointment['id'];
             $codes['appointment_date'] = DateTime::formatDate( $appointment['start_date'] );
@@ -279,10 +568,23 @@ class Page extends Lib\Base\Ajax
             $codes['booking_number'] = $appointment['id'];
             $codes['internal_note'] = esc_html( $appointment['internal_note'] );
             $codes['on_waiting_list'] = $appointment['on_waiting_list'];
-            $codes['service_name'] = $appointment['service_name'] ? esc_html( $appointment['service_name'] ) : __( 'Untitled', 'bookly' );
+            // $codes['service_name'] = $appointment['service_name'] ? esc_html( $appointment['service_name'] ) : __( 'Untitled', 'bookly' );
             $codes['service_price'] = Price::format( $appointment['service_price'] * $appointment['units'] );
             $codes['service_duration'] = DateTime::secondsToInterval( $appointment['duration'] * $appointment['units'] );
-            $codes['signed_up'] = $appointment['total_number_of_persons'];
+          //mohit 
+            
+			
+          $client_name_hwe ="'".$appointment['customers'][0]['client_name']."'";
+          $client_phone_hwe ="'".$appointment['customers'][0]['client_phone']."'";
+          $client_email_hwe ="'".$appointment['customers'][0]['client_email']."'";
+          $appointment_id_hwe =$appointment['id'];
+          $current_login_id =$_POST['staff_ids'];
+          $confirm_box ="'Are You Sure, You Want to Approved?'";
+          $codes['signed_up']        = $appointment['total_number_of_persons'].'<br><div onclick="return hwe_appointment('.$appointment_id_hwe.','.$current_login_id.','.$check_condition.')" style="'.$styling_pending_button.'" style="width:52px;display:block;" class="badge badge-'.$change_color_status.' get_staff_ids" data-staff_id="'.$appointment['id'].'" data-current_user_id="'.$_POST['staff_ids'].'" id="'.$set_id_appointment.'">' .$button_name. '</div>&nbsp;&nbsp;&nbsp;&nbsp;
+            <div onclick="return hwe_appointment_cancel('.$appointment_id_hwe.','.$current_login_id.','.$check_condition.','.$client_name_hwe.','.$client_phone_hwe.','.$client_email_hwe.')" style="'.$styling_cancel_button.'" class="badge badge-danger cancel_btn" data-staff_id="'.$appointment['id'].'" data-current_user_id="'.$_POST['staff_ids'].'">Cancel Job</div>
+            ';
+
+
             foreach ( array( 'staff_name', 'staff_phone', 'staff_info', 'staff_email', 'service_info', 'service_capacity', 'category_name', 'client_note' ) as $field ) {
                 $codes[ $field ] = esc_html( $appointment[ $field ] );
             }
@@ -319,9 +621,10 @@ class Page extends Lib\Base\Ajax
                 } else {
                     $number_of_persons = '';
                 }
-                $customer['status_color'] = $status_color;
-                $customer['nop'] = $number_of_persons;
-                $customer['status'] = CustomerAppointment::statusToString( $customer['status'] );
+                // $customer['status_color'] = $status_color;
+                // $customer['nop'] = $number_of_persons;
+                // $customer['status'] = CustomerAppointment::statusToString( $customer['status'] );
+                $popover_customers .= '<div class="d-flex"><div class="text-muted flex-fill">' . $customer['client_name'] . '</div><div class="text-nowrap">' . $number_of_persons . '<span class="badge badge-' . $status_color . '">' . CustomerAppointment::statusToString( $customer['status'] ) . '</span></div></div>';
                 $codes['participants'][] = $customer;
             }
 
@@ -339,6 +642,7 @@ class Page extends Lib\Base\Ajax
                     $codes['total_price'] = Price::format( $appointment['total'] );
                     $codes['amount_paid'] = Price::format( $appointment['paid'] );
                     $codes['amount_due'] = Price::format( $appointment['total'] - $appointment['paid'] );
+                    $codes['total_price']    = Price::format( $appointment['total'] );
                     $codes['payment_type'] = Lib\Entities\Payment::typeToString( $appointment['payment_gateway'] );
                     $codes['payment_status'] = Lib\Entities\Payment::statusToString( $appointment['payment_status'] );
                 }
@@ -348,10 +652,20 @@ class Page extends Lib\Base\Ajax
                 $participants = 'many';
                 $template = $many_participants;
             }
-            $codes['appointment_color'] = $appointment['service_color'];
-            $codes['appointment_end_time'] = ( $appointment['duration'] * $appointment['units'] >= DAY_IN_SECONDS && $appointment['start_time_info'] ? $appointment['end_time_info'] : DateTime::formatTime( $appointment['end_date'] ) );
+
+            $tooltip = '<i class="" style="color:%s"></i><span>{service_name}</span>' . $popover_customers . '<span class="d-block text-muted">{appointment_time} - %s</span>';
+
+            $tooltip = sprintf( $tooltip,
+                $appointment['service_color'],
+                ( $appointment['duration'] * $appointment['units'] >= DAY_IN_SECONDS && $appointment['start_time_info'] ? $appointment['end_time_info'] : DateTime::formatTime( $appointment['end_date'] ) )
+            );
+            
+            // $codes['appointment_color'] = $appointment['service_color'];
+            // $codes['appointment_end_time'] = ( $appointment['duration'] * $appointment['units'] >= DAY_IN_SECONDS && $appointment['start_time_info'] ? $appointment['end_time_info'] : DateTime::formatTime( $appointment['end_date'] ) );
 
             $codes = Proxy\Shared::prepareAppointmentCodesData( $codes, $appointment, $participants );
+
+            
 
             switch ( $coloring_mode ) {
                 case 'status';
@@ -365,6 +679,9 @@ class Page extends Lib\Base\Ajax
                     $color = $appointment['service_color'];
             }
             $codes['description'] = Lib\Utils\Codes::stringify( $template, $codes, false );
+
+          
+
             $appointments[ $key ] = array(
                 'id' => $appointment['id'],
                 'start' => $appointment['start_date'],
@@ -384,6 +701,7 @@ class Page extends Lib\Base\Ajax
                     'overall_status' => $overall_status,
                 ),
             );
+       
             if ( $appointment['duration'] * $appointment['units'] >= DAY_IN_SECONDS && $appointment['start_time_info'] ) {
                 $appointments[ $key ]['extendedProps']['header_text'] = sprintf( '%s - %s', $appointment['start_time_info'], $appointment['end_time_info'] );
             }

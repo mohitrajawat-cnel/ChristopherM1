@@ -12,6 +12,8 @@
             $staff_gateways_list = $('#bookly-js-gateways-list', $form),
             $staff_gateways = $('#bookly-gateways', $container),
             $staff_color = $('.bookly-js-color-picker', $container);
+            $staff_gender = $('#bookly-gender', $container),
+            $staff_zip_code     = $('#bookly-zip_code', $container)
 
         if (obj.options.intlTelInput.enabled) {
             $staff_phone.intlTelInput({
@@ -99,6 +101,17 @@
                     phone = $staff_phone.val();
                 }
                 data.phone = phone;
+
+                var genderhwe=$('#bookly-gender').val();
+
+			   var zipcodehwe=$('#bookly-zip_code').val();
+ 
+                data.push({name: 'action', value: 'bookly_update_staff'});
+                data.push({name: 'phone', value: phone});
+                data.push({name: 'gender', value: genderhwe});
+                data.push({name: 'zip_code', value: zipcodehwe});
+                data.push({name: 'csrf_token', value: BooklyL10nGlobal.csrf_token});
+                
                 $.ajax({
                     type: 'POST',
                     url: ajaxurl,

@@ -224,19 +224,33 @@ abstract class Entity extends Cache
      */
     public function save()
     {
+        // $gender=''; 
+      //  $zip_code='';
+       //foreach($_REQUEST as $set_value)
+       // {
+             //$gender=$_REQUEST['gender'];
+            // $zip_code=$_REQUEST['zip_code'];
+      //  }
+        
+
+        
         // Prepare query data.
-        $set = array();
+        $set    = array();
         $values = array();
+        global $last_id;
+        global $staff_last_id;
         foreach ( static::$schema as $field => $data ) {
+
             if ( $field == 'id' ) {
                 continue;
             }
             $value = $this->{$field};
+
             if ( $value === null ) {
                 if ( isset( static::$schema[ $field ]['sequent'] ) && static::$schema[ $field ]['sequent'] ) {
                     // Set greater than max value
-                    $set[] = sprintf( '`%s` = %s', $field, static::$schema[ $field ]['format'] );
-                    $max = (int) self::$wpdb->get_var( sprintf( 'SELECT MAX(`%s`) FROM `%s`', $field, $this->table_name ) );
+                    $set[]    = sprintf( '`%s` = %s', $field, static::$schema[ $field ]['format'] );
+                    $max      = (int) self::$wpdb->get_var( sprintf( 'SELECT MAX(`%s`) FROM `%s`', $field, $this->table_name ) );
                     $values[] = ++ $max;
                 } else {
                     $set[] = sprintf( '`%s` = NULL', $field );
@@ -246,19 +260,58 @@ abstract class Entity extends Cache
                 $values[] = $value;
             }
         }
+
         // Run query.
+          
+		
+		/*$set = array_merge(array_slice($set, 0, 0), array("'gender'"), array_slice($set, 0));
+		$set = array_merge(array_slice($set, 0, 0), array("'zip_code'"), array_slice($set, 0));
+        //$set =array_slice($set,0,$gender_array); 
+        $values=array_merge(array_slice($values, 0, 0), array($gender), array_slice($values, 0));
+        $values =array_merge(array_slice($values, 0, 0), array($zip_code), array_slice($values, 0));
+*/
+     
+
+        $get_ids=array();
         if ( $this->getId() ) {
-            Lib\Utils\Log::fromBacktrace( $this );
-            $res = self::$wpdb->query( self::$wpdb->prepare(
+			
+
+                   $res = self::$wpdb->query( self::$wpdb->prepare(
                 sprintf(
-                    'UPDATE `%s` SET %s WHERE `id` = %d',
+                    'UPDATE `%s` SET %s  WHERE `id` = %d',
                     $this->table_name,
                     implode( ', ', $set ),
                     $this->getId()
                 ),
                 $values
             ) );
+
+//lucky
+			
+			$gender=$_REQUEST['gender'];
+            $zip_code=$_REQUEST['zip_code'];
+
+			if($this->table_name == 'wp_bookly_staff')
+			{
+                global $wpdb;
+				$update="UPDATE ".$this->table_name." SET gender ='".$gender."',
+														   zip_code ='".$zip_code."'
+				where id=".$this->getId();
+	           
+				$wpdb->query($update);
+			
+			}
+				
         } else {
+            
+/*print_r( self::$wpdb->prepare(
+                sprintf(
+                    'INSERT INTO `%s` SET %s',
+                    $this->table_name,
+                    implode( ', ', $set )
+                ),
+                $values
+            ) );*/
             $res = self::$wpdb->query( self::$wpdb->prepare(
                 sprintf(
                     'INSERT INTO `%s` SET %s',
@@ -268,12 +321,83 @@ abstract class Entity extends Cache
                 $values
             ) );
             if ( $res ) {
+				   global $wpdb;
+					if($this->table_name == 'wp_bookly_customers')
+					{
+			          $last_id =  $wpdb->insert_id;
+					}
+
+                    if($this->table_name == 'wp_bookly_staff')
+					{
+			          $staff_last_id =  $wpdb->insert_id;
+						
+					}
+
                 $this->setId( self::$wpdb->insert_id );
-                Lib\Utils\Log::fromBacktrace( $this, Lib\Utils\Log::ACTION_CREATE );
+
+		  
+                 if($this->table_name == 'wp_bookly_customer_appointments')
+                  {
+                  
+				
+					$update_status="UPDATE ".$wpdb->prefix."bookly_customer_appointments SET status ='pending'
+															   
+					where customer_id=".$last_id;
+				   
+					$wpdb->query($update_status);
+
+					
+                    $appointment_id = $wpdb->get_results("SELECT * FROM wp_bookly_customer_appointments WHERE customer_id='".$last_id."'",ARRAY_A);
+
+                     
+						 foreach($appointment_id as $appointment_id_hwe)
+						{
+						   $staff_id =$appointment_id_hwe['appointment_id'];
+						}
+	                   
+					    $update_staff_id="UPDATE `".$wpdb->prefix."bookly_appointments` SET staff_id=0
+																   
+						where id='".$staff_id."'";
+					   
+						$wpdb->query($update_staff_id);
+
+                        
+
+                       
+
+				  }
+ 				$gender=$_REQUEST['gender'];
+				$zip_code=$_REQUEST['zip_code'];
+	
+				if($this->table_name == 'wp_bookly_staff')
+				{
+                     
+		
+         //mohit code 
+//insert_staff_id_in_service
+                   
+				  /* $insert_staff_id_service="INSERT into ".$wpdb->prefix."bookly_staff_services SET staff_id ='".$staff_last_id."',
+															   service_id ='20'";
+					
+				   
+					$wpdb->query($insert_staff_id_service);  */  
+				 
+                  
+               
+					$update="UPDATE ".$this->table_name." SET gender ='".$gender."',
+															   zip_code ='".$zip_code."'
+					where id=".$staff_last_id;
+				   
+					$wpdb->query($update);
+				
+				}
+	
             }
         }
 
         if ( $res ) {
+
+
             // Update loaded values.
             $this->loaded_values = $this->getFields();
         }

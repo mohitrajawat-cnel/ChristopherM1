@@ -86,7 +86,9 @@
                         csrf_token: BooklyL10nGlobal.csrf_token,
                         staff_ids: obj.options.getStaffMemberIds(),
                         location_ids: obj.options.getLocationIds(),
-                        service_ids: obj.options.getServiceIds()
+                        service_ids: obj.options.getServiceIds(),
+                        radius: obj.options.getradius(),
+						zipcode:  obj.options.getzipcode()
                     };
                 }
             }],
@@ -387,11 +389,39 @@
     $('body').on('change', '#bookly-appointment-location', function () {
         locationChanged = true;
     });
-
+    //mohit
     Calendar.prototype.options = {
-        calendar: {},
-        getCurrentStaffId: function () { return -1; },
-        getStaffMemberIds: function () { return [this.getCurrentStaffId()]; },
+    calendar: {},
+    getCurrentStaffId: function () { return -1; },
+    getStaffMemberIds: function () { return [this.getCurrentStaffId()]; },
+    getzipcode:function(){  var sPageURL = window.location.search.substring(1),
+    sURLVariables = sPageURL.split('&'),
+    sParameterName,
+    i;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === "zipcode") {
+            return typeof sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+        }
+    }
+    return '';
+    },
+    getradius:function(){  var sPageURL = window.location.search.substring(1),
+            sURLVariables = sPageURL.split('&'),
+            sParameterName,
+            i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            sParameterName = sURLVariables[i].split('=');
+
+            if (sParameterName[0] === "radius") {
+                return typeof sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+            }
+        }
+        return '';
+        },
         getServiceIds: function () { return ['all']; },
         getLocationIds: function () { return ['all']; },
         refresh: function () {},

@@ -53,9 +53,46 @@ class Ajax extends Lib\Base\Ajax
             self::$staff->setColor( sprintf( '#%06X', mt_rand( 0, 0x64FFFF ) ) );
         }
 
+        global $wpdb;
+		$tablebookly=$wpdb->prefix."bookly_staff";
+		$select="select * from $tablebookly where id='$staffid'";
+		$results=$wpdb->get_results($select);
+		foreach($results as $valueres)
+		{
+			$gender=	$valueres->gender;
+			$zip_code=	$valueres->zip_code;
+			$maleselected="";
+			$femaleselected="";
+			if($gender=="male")
+			{
+				$maleselected="selected=selected";	
+				
+			}
+			if($gender=="female")
+			{
+				$femaleselected="selected=selected";	
+				
+			}
+			
+		}
+//print_r($staff);
+//die();
+//lucky
         $response = array(
             'html' => array(
-                'edit' => self::renderTemplate( 'dialog_body', array( 'staff' => self::$staff ), false ),
+                'edit'    => self::renderTemplate( 'dialog_body', array( 'staff' => self::$staff ), false ).'<div class="form-group">
+                    <label for="bookly-gender">Gender</label>
+                    <select class="form-control" id="bookly-gender">
+                        <option class="form-control" value="">Select Gender</option>
+                        <option class="form-control" value="male" '.$maleselected.'>Male</option>
+                        <option class="form-control" '.$femaleselected.' value="female">Female</option>
+					</select>
+                </div>
+				
+				<div class="form-group">
+                    <label for="bookly-zip_code">Zip Code</label>
+                    <input class="form-control" id="bookly-zip_code" value="'.$zip_code.'" type="text">
+                </div>' ,
                 'details' => self::renderTemplate( 'details', array( 'staff' => self::$staff, 'users_for_staff' => $users_for_staff ), false ),
             ),
         );
@@ -118,6 +155,67 @@ class Ajax extends Lib\Base\Ajax
         $data = Proxy\Shared::preUpdateStaffDetails( $data, self::$staff, $parameters );
         if ( empty( $data['alerts']['error'] ) ) {
             self::$staff->save();
+
+            //mohit
+
+			global $wpdb;
+
+            $staff_id_hwe = self::$staff->getId();
+	  
+
+			$charset_collate = $wpdb->get_charset_collate();
+			
+			$table_name = $wpdb->prefix."interputer_lat_long"; 
+			$table = "CREATE TABLE IF NOT EXISTS ".$table_name."(
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				staff_id VARCHAR(255) NOT NULL,
+				latitude VARCHAR(255) NOT NULL,
+				longitude VARCHAR(255) NOT NULL,
+				created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			)".$charset_collate.";";
+			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+			dbDelta( $table );
+	
+			$zip_code =$_POST['zip_code'];
+			// $staff_id =$_POST['id'];
+			$url = "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyCZKEvihF8xfkRiJ3Mgbr9fSR2TbLHklzk&components=postal_code:".$zip_code;
+			$result_string = file_get_contents($url);
+			$result = json_decode($result_string, true);
+			$value =$result['results'][0]['geometry']['location'];
+
+			
+			   $latitude =$value['lat'];
+			   $longitude =$value['lng'];
+		
+		
+				$tablebookly=$wpdb->prefix."interputer_lat_long";
+				$select="select * from $tablebookly where staff_id='".$staff_id_hwe."'";
+				$results=$wpdb->get_results($select);
+				if(count($results) > 0)
+				{
+                    
+
+				 $update = "UPDATE ".$wpdb->prefix."interputer_lat_long 
+				 SET latitude ='".$latitude."',
+					longitude ='".$longitude."' where staff_id ='".$staff_id_hwe."'";
+				
+					$wpdb->query($update);
+
+				}
+				else
+				{
+	
+					 $sql = $wpdb->prepare("INSERT INTO ".$wpdb->prefix."interputer_lat_long 
+				SET latitude ='".$latitude."',
+					longitude ='".$longitude."',
+                    staff_id ='".$staff_id_hwe."'
+				
+				");
+				
+					$wpdb->query($sql);
+
+
+				}
 
             Proxy\Shared::updateStaffDetails( self::$staff, $parameters );
             $staff = self::$staff->getFields();

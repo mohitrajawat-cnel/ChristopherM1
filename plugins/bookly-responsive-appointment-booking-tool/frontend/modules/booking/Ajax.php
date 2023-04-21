@@ -836,7 +836,186 @@ class Ajax extends Lib\Base\Ajax
                     $order = $userData->save( $payment );
                     if ( $payment !== null ) {
                         $payment->setDetailsFromOrder( $order, $cart_info )->save();
+                        $last_appointment_id_hwe='';
+						foreach($userData->cart->getItems() as $order_value1)
+						{
+                              global $wpdb;
+						      $last_appointment_id_hwe = $order_value1->getAppointmentId();
+							  $update_status ="UPDATE  ".$wpdb->prefix."bookly_customer_appointments set status='pending' where appointment_id =".$last_appointment_id_hwe; 
+                              $wpdb->query($update_status);
+
+							  $update_staff_id ="UPDATE  ".$wpdb->prefix."bookly_appointments set staff_id='0' where id =".$last_appointment_id_hwe; 
+                              $wpdb->query($update_staff_id);
+						}
                     }
+
+
+                     //mohit
+                   ?>
+                   <?php 
+                  global $wpdb;
+                   $charset_collate = $wpdb->get_charset_collate();
+                   
+                   $table_name = $wpdb->prefix."interputer_booking_lat_long"; 
+                   $table = "CREATE TABLE IF NOT EXISTS ".$table_name."(
+                       id INT AUTO_INCREMENT PRIMARY KEY,
+                       staff_id VARCHAR(255) NOT NULL,
+                       latitude VARCHAR(255) NOT NULL,
+                       longitude VARCHAR(255) NOT NULL,
+                       created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                   )".$charset_collate.";";
+                   require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+                   dbDelta( $table );
+
+                   
+
+                   $appointment_details =$order->getCustomer();
+                   $getuserid=$appointment_details->getWpUserId();
+                   $getFullName =$appointment_details->getFullName();
+                   $getPhone =$appointment_details->getPhone();
+                   $getEmail =$appointment_details->getEmail();
+                   $zip_code =$appointment_details->getPostcode();
+
+/*echo "<pre>";
+                 $order->getItems()
+echo "</pre>";
+die("mohit");*/
+
+   foreach($userData->cart->getItems() as $order_value)
+   {
+
+             $appointment_id = $order_value->getAppointmentId();
+           $get_gender = $order_value->getCustomFields();
+           foreach($get_gender as $get_gender_hwe)
+           {
+              $gender_booking =$get_gender_hwe['value'];
+           }
+
+
+           $select3 =$wpdb->get_results("SELECT * from ".$wpdb->prefix."bookly_appointments where id =".$appointment_id,ARRAY_A); 
+   
+
+            foreach($select3 as $cus_data2)
+            {
+               $date1 =$cus_data2['start_date'];
+   
+               $date_hwe =date("F d,Y",strtotime($date1));
+               $time_hwe =date("h:i a",strtotime($date1));
+            }
+
+                       $url = "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyCZKEvihF8xfkRiJ3Mgbr9fSR2TbLHklzk&components=postal_code:".$zip_code;
+                       $result_string = file_get_contents($url);
+                       $result = json_decode($result_string, true);
+                       $value =$result['results'][0]['geometry']['location'];
+           
+                       
+                            $latitude =$value['lat'];
+                            $longitude =$value['lng'];
+                   
+                   
+                           $tablebookly=$wpdb->prefix."interputer_booking_lat_long";
+                           $select="select * from $tablebookly where staff_id='".$appointment_id."'";
+                           $results=$wpdb->get_results($select);
+                           if(count($results) > 0)
+                           {
+                               
+           
+                             /*$update = "UPDATE ".$wpdb->prefix."interputer_booking_lat_long 
+                            SET latitude ='".$latitude."',
+                               longitude ='".$longitude."' where staff_id ='".$appointment_id."'";
+                           
+                               $wpdb->query($update);*/
+           
+                           }
+                           else
+                           {
+               
+                                $sql = $wpdb->prepare("INSERT INTO ".$wpdb->prefix."interputer_booking_lat_long 
+                           SET latitude ='".$latitude."',
+                               longitude ='".$longitude."',
+                               staff_id ='".$appointment_id."'
+                           
+                           ");
+                           
+                               $wpdb->query($sql);
+                               
+           
+           
+                           }
+
+                      $query = "SELECT *, (((acos(sin((".$latitude."*pi()/180)) * sin((`latitude`*pi()/180)) + cos((".$latitude."*pi()/180)) * cos((`latitude`*pi()/180)) * cos(((".$longitude."- `longitude`)*pi()/180)))) * 180/pi()) * 60 * 1.1515) as distance FROM `wp_interputer_lat_long`";
+                     $distance =$wpdb->get_results($query,ARRAY_A);
+
+                      $dis_staff_id='';
+                       foreach($distance as $distance_hwe)
+                       {
+
+                           if($distance_hwe['distance'] <= 30 || $distance_hwe['distance']== '')
+                           {
+                               $dis_staff_id =$distance_hwe['staff_id'];
+
+                                $select_staff =$wpdb->get_results("SELECT * from ".$wpdb->prefix."bookly_staff where id='".$dis_staff_id."'",ARRAY_A);
+
+                                foreach($select_staff as $select_staff_data)
+                                {
+                                       $gender =$select_staff_data['gender'];
+                                       if($gender == 'male')
+                                       {
+                                          $gender_staff ='Male';
+                                       } 
+                                       else if($gender == 'female')
+                                       {
+                                          $gender_staff ='Female';
+                                       }
+                                       $all_email =$select_staff_data['email'];
+
+                                    if($gender_booking == 'Male' || $gender_booking == 'Female')
+                                       {
+                                           if($gender_booking != $gender_staff)
+                                           {
+
+                                               break;
+   
+                                           
+                                           }
+                                       }
+                                       
+                                       $getuserid=$appointment_details->getWpUserId();
+                                       $getFullName =$appointment_details->getFullName();
+                                       $getPhone =$appointment_details->getPhone();
+                                       $getEmail =$appointment_details->getEmail();
+                                       //$zip_code =$appointment_details->getPostcode();
+                                         
+                                       $to = $all_email;
+                                       $subject = 'New booking information';
+                                   
+                                       $message = '<p>Hello.</p>
+                                                   <p>You have a new booking.</p>
+                                                   <p>Date: '.$date_hwe.'</p>
+                                                   <p>Time: '.$time_hwe.'</p>
+                                                   <p>Client name: '.$getFullName.'</p>
+                                                   <p>Client phone: '.$getPhone.'</p>
+                                                   <p>Client email: '.$getEmail.'</p>';
+                                   
+                                       $headers = array("MIME-Version: 1.0\r\n");
+                                       $headers = array('Content-Type: text/html; charset=UTF-8');
+                                       $headers[] = 'From: iTerp Development Server <iterp@chrisorah.com>';
+                                       
+                                       wp_mail( $to, $subject, $message,$headers );
+                                       
+
+                                }
+              
+                           }
+
+
+                           
+                       }
+
+
+               }  
+
+
                     // Send notifications.
                     Lib\Notifications\Cart\Sender::send( $order );
                     $response = array(

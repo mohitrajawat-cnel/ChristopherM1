@@ -70,3 +70,14 @@ $checkbox_prefix = 'bookly-week-day-' . $userData->getFormId() . '-';
         </div>
     </div>
 </div>
+<style>
+/*lucky*/
+.servicehwe
+{
+	display:none !important;
+}
+.durationhwe
+{
+	display:none !important;
+}
+</style>
