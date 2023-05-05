@@ -284,27 +284,28 @@
                     })
                 );
             }
-            $buttons.append(
-                $('<a class="btn btn-danger btn-sm text-white">').append('<i class="far fa-fw fa-trash-alt">')
-                .attr('title', obj.options.l10n.delete)
-                .on('click', function (e) {
-                    e.stopPropagation();
-                    // Localize contains only string values
-                    if (obj.options.l10n.recurring_appointments.active == '1' && props.series_id) {
-                        $(document.body).trigger('recurring_appointments.delete_dialog', [calendar, arg.event]);
-                    } else {
-                        new BooklyConfirmDeletingAppointment({
-                                action: 'bookly_delete_appointment',
-                                appointment_id: arg.event.id,
-                                csrf_token: BooklyL10nGlobal.csrf_token
-                            },
-                            function (response) {
-                                calendar.removeEventById(arg.event.id);
-                            }
-                        );
-                    }
-                })
-            );
+            //mohit
+            // $buttons.append(
+            //     $('<a class="btn btn-danger btn-sm text-white">').append('<i class="far fa-fw fa-trash-alt">')
+            //     .attr('title', obj.options.l10n.delete)
+            //     .on('click', function (e) {
+            //         e.stopPropagation();
+            //         // Localize contains only string values
+            //         if (obj.options.l10n.recurring_appointments.active == '1' && props.series_id) {
+            //             $(document.body).trigger('recurring_appointments.delete_dialog', [calendar, arg.event]);
+            //         } else {
+            //             new BooklyConfirmDeletingAppointment({
+            //                     action: 'bookly_delete_appointment',
+            //                     appointment_id: arg.event.id,
+            //                     csrf_token: BooklyL10nGlobal.csrf_token
+            //                 },
+            //                 function (response) {
+            //                     calendar.removeEventById(arg.event.id);
+            //                 }
+            //             );
+            //         }
+            //     })
+            // );
 
             return $buttons;
         }
